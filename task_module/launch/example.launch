@@ -19,7 +19,11 @@
     <!-- I don't have the DVL with me so the DVL has to wait a little bit :V -->
 
     <!-- Enable the example.py State Machine -->
-    <node name="example_node" pkg="tasks" type="example.py" output="screen" cwd="node"></node>
+    <node name="example_node" pkg="tasks" type="example.py" output="screen" cwd="node">
+    <!-- Tresholds and parameters for the state machine -->
+        <rosparam file = "$(find task)/config/edge_cases.yaml" command="load"/>
+        <rosparam file= "$(find task)/config/topics.yaml" command="load"/>
+    </node>
 
 
 

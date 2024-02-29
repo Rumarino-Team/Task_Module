@@ -23,7 +23,7 @@ class SharedData:
     def __init__(self):
         self.zed_data = {"objects_stamped": None, "camera_info": None, "imu": None, 
                          "image": None, "pose": None, "odom": None, "path_odom": None, 
-                         "path_map": None}
+                         "path_map": None, "plane_stamped": None}
         self.dvl_data = None
         self.imu_data = {'yaw': None, 'pitch': None, 'roll': None}
         # Add more attributes as needed
