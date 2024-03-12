@@ -13,7 +13,7 @@ services:
       # - ROS_HOSTNAME=simulator_node
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
-      - /home/cesar/Task_Module:/root/catkin_ws/src/Task_Module
+      - ../../:/root/catkin_ws/src/Task_Module
     privileged: true
     stdin_open: true
     tty: true

@@ -1,5 +1,7 @@
 FROM osrf/ros:melodic-desktop-full
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install dependencies
 RUN apt update && apt install -y\
  ros-melodic-smach\
@@ -19,7 +21,7 @@ RUN apt update && apt install -y\
 
 # Update dependencies
 RUN rosdep update
-RUN apt-get update && apt-get dist-upgrade
+RUN apt-get update && apt-get dist-upgrade -y
 
 # Create a Catkin Workspace
 RUN mkdir -p /root/catkin_ws/src
