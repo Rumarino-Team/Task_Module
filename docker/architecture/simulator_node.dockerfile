@@ -36,6 +36,7 @@ RUN git clone https://github.com/uuvsimulator/desistek_saga.git
 RUN git clone https://github.com/uuvsimulator/rexrov2.git
 RUN git clone https://github.com/stereolabs/zed-ros-interfaces.git
 RUN git clone https://github.com/Rumarino-Team/Hydrus.git
+RUN git clone https://github.com/JuanDelPueblo/vortex-auv-simulator.git
 
 
 

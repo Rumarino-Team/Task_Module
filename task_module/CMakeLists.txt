@@ -1,4 +1,4 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(Task_Module)
+project(task_module)
 find_package(catkin REQUIRED)
 catkin_metapackage()

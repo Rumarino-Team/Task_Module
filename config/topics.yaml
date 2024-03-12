@@ -14,7 +14,7 @@ zed_camera:
 
 
 submarine_pose:
-  pose: "/rexrov2/pose_gt"
+  pose: "/auv/pose_gt"
 
 dvl:
   DVL_Message: "/wayfinder/topic_name"
@@ -25,6 +25,6 @@ imu:
   roll: "/hydrus/IMU/roll"
 
 uuv_control_services:
-  GoTo: "/rexrov2/go_to"
-  Hold: "/rexrov2/hold_vehicle"
-  init_waypoints: "/rexrov2/start_waypoint_list"
+  GoTo: "/auv/go_to"
+  Hold: "/auv/hold_vehicle"
+  init_waypoints: "/auv/start_waypoint_list"
