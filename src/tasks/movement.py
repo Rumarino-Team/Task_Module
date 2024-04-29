@@ -18,10 +18,18 @@ from data import read_yaml_file
 import os
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-
+from utils import quaternions_angle_difference
 
 class UpdatePoseState(smach.State):
-    def __init__(self,  edge_case_callback,next_state_callback = None ,num_waypoints=1, pose = None ,threshold = 1.2,
+
+
+    """Parameters:
+
+    edge_case_callback - callback function for edge case detection
+    point: None
+    
+    """
+    def __init__(self,  edge_case_callback,next_state_callback = None ,num_waypoints=1, point = None ,threshold = 1.2,
                          speed = 2.0, heading_offset = 0.1, fixed_heading = False,radius_of_acceptance  = 0.5,):
         smach.State.__init__(self, outcomes=['success', 'edge_case_detected', 'aborted'],
                              input_keys=['shared_data'],
@@ -29,7 +37,7 @@ class UpdatePoseState(smach.State):
         self.edge_case_callback = edge_case_callback
         self.next_state_callback = next_state_callback
         self.num_waypoints = num_waypoints
-        self.pose = pose
+        self.point = point
         self.threshold = threshold
         self.speed = speed
         self.heading_offset = heading_offset
@@ -66,6 +74,7 @@ class UpdatePoseState(smach.State):
         waypoints.append(waypoint)
         return waypoints
     
+
     @staticmethod
     def pose_reached( current_pose, destination_pose, threshold):
         # Check if the current pose is within a certain threshold of the destination pose
@@ -73,33 +82,21 @@ class UpdatePoseState(smach.State):
         # print("current_pose",current_pose)
         print(destination_pose)
 
-        if not isinstance(current_pose, Odometry):
-            rospy.logerr("current_pose must be an instance of Odometry")
+        if not isinstance(current_pose, Pose):
+            rospy.logerr("current_pose must be an instance of Pose and got of type: " + str(type(current_pose)))
 
-        if not isinstance(destination_pose, Waypoint):
-            rospy.logerr("destination_pose must be an instance of Waypoint")
+        if not isinstance(destination_pose, Pose):
+            rospy.logerr("destination_pose must be an instance of Pose and got of type: " + str(type(destination_pose)))
 
-        current_pose.pose.pose.position.x
-        destination_pose.point.x
+     
         position_diff = math.sqrt(
-                (current_pose.pose.pose.position.x - destination_pose.point.x) ** 2 +
-                (current_pose.pose.pose.position.y - destination_pose.point.y) ** 2 +
-                (current_pose.pose.pose.position.z - destination_pose.point.z) ** 2
+                (current_pose.position.x - destination_pose.position.x) ** 2 +
+                (current_pose.position.y - destination_pose.position.y) ** 2 +
+                (current_pose.position.z - destination_pose.position.z) ** 2
             )
         
-        # TODO: Currently waypoints do not have an orientation data. Meaning that  we do not control that for now
-                # To implement that we will need to chage the dp_controller.py file to include the orientation data.
-                # and make a custom service and meesage for that information.
         
-
-        
-            # Calculate orientation difference (simple method, more complex calculations may involve quaternions)
-        # orientation_diff = math.sqrt(
-        #         (current_pose.orientation.x - destination_pose.orientation.x) ** 2 +
-        #         (current_pose.orientation.y - destination_pose.orientation.y) ** 2 +
-        #         (current_pose.orientation.z - destination_pose.orientation.z) ** 2 +
-        #         (current_pose.orientation.w - destination_pose.orientation.w) ** 2
-        #     )
+        yaw_angle_diff = quaternions_angle_difference(current_pose.pose.pose.orientation, destination_pose.orientation)
 
         return position_diff <= threshold  #and orientation_diff <= threshold
 
@@ -139,23 +136,32 @@ class UpdatePoseState(smach.State):
             return 'aborted'
 
     def loop_monitor(self, userdata, waypoints):
-        shared_data = userdata.shared_data
-        # Monitoring loop
-        while not rospy.is_shutdown():
+            shared_data = userdata.shared_data
+            start_time = rospy.Time.now()  # Start time for timeout calculation
 
-            # Check if the destination has been reached
-            if self.pose_reached(userdata.shared_data.submarine_pose ,waypoints[0], threshold=self.threshold):
-                rospy.loginfo("Destination has been reached.")
-                return 'success'
+            while not rospy.is_shutdown() and rospy.Time.now() - start_time < self.timeout_duration:
+                if self.pose_reached(shared_data.submarine_pose, waypoints[0], self.threshold):
+                    rospy.loginfo("Destination reached. Verifying stabilization.")
+                    # Ensure stabilization for the configured time
+                    stabilization_start = rospy.Time.now()
+                    while rospy.Time.now() - stabilization_start < rospy.Duration(0.5):
+                        if not self.pose_reached(shared_data.submarine_pose, waypoints[0], self.threshold):
+                            break
+                        rospy.sleep(0.1)
+                    else:  # If the loop completes without breaking
+                        rospy.loginfo("Destination stabilized.")
+                        return 'success'
 
-            if self.edge_case_callback(shared_data):
-                rospy.logwarn("Edge case detected, transitioning to handle situation.")
-                return "edge_case_detected"
+                if self.edge_case_callback(shared_data):
+                    rospy.logwarn("Edge case detected, transitioning to handle situation.")
+                    return "edge_case_detected"
 
-            rospy.sleep(0.1)  # Sleep to prevent a busy loop, adjust as needed
-            print("Monitoring loop")
+                rospy.sleep(0.1)
+                print("Monitoring loop")
 
-        return 'aborted'
+            rospy.loginfo("Failed to reach destination within the timeout.")
+            return 'timeout'  # or 'failed' based on your terminology
+
 
 
 
