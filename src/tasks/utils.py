@@ -1,6 +1,6 @@
 import rospy
 import smach
-from tasks.src.movement import * 
+from tasks.movement import * 
 from enum import Enum
 import math
 
@@ -36,3 +36,21 @@ def quaternions_angle_difference(q1, q2):
 
     angle_difference = 2 * math.acos(dot)
     return angle_difference
+
+
+def euler_to_quaternion(roll, pitch, yaw):
+    # Calculate the sine and cosine of the half angles
+    cy = math.cos(yaw * 0.5)
+    sy = math.sin(yaw * 0.5)
+    cp = math.cos(pitch * 0.5)
+    sp = math.sin(pitch * 0.5)
+    cr = math.cos(roll * 0.5)
+    sr = math.sin(roll * 0.5)
+
+    # Compute the quaternion
+    w = cr * cp * cy + sr * sp * sy
+    x = sr * cp * cy - cr * sp * sy
+    y = cr * sp * cy + sr * cp * sy
+    z = cr * cp * sy - sr * sp * cy
+
+    return (w, x, y, z)

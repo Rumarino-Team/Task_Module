@@ -1,7 +1,7 @@
 import rospy
 import smach
 from uuv_control_msgs.srv import GoTo, GoToRequest
-from geometry_msgs.msg import Pose, PoseStamped, Point
+from geometry_msgs.msg import Pose, PoseStamped, Point, Quaternion
 from uuv_control_msgs.msg import Waypoint
 from uuv_control_msgs.srv import Hold, HoldRequest
 from geometry_msgs.msg import PoseWithCovariance 
@@ -18,7 +18,7 @@ from data import read_yaml_file
 import os
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-from utils import quaternions_angle_difference
+from utils import quaternions_angle_difference, euler_to_quaternion
 
 class UpdatePoseState(smach.State):
 
@@ -30,8 +30,8 @@ class UpdatePoseState(smach.State):
     
     """
     def __init__(self,  edge_case_callback,next_state_callback = None ,num_waypoints=1, point = None ,threshold = 1.2,
-                         speed = 2.0, heading_offset = 0.1, fixed_heading = False,radius_of_acceptance  = 0.5,):
-        smach.State.__init__(self, outcomes=['success', 'edge_case_detected', 'aborted'],
+                        angle_threshold = 0.04, speed = 2.0, heading_offset = 0.1, fixed_heading = False,radius_of_acceptance  = 0.5,):
+        smach.State.__init__(self, outcomes=['success', 'edge_case_detected', 'aborpose_reachedted'],
                              input_keys=['shared_data'],
                              output_keys=['shared_data'])
         self.edge_case_callback = edge_case_callback
@@ -39,6 +39,7 @@ class UpdatePoseState(smach.State):
         self.num_waypoints = num_waypoints
         self.point = point
         self.threshold = threshold
+        self.angle_threshold = angle_threshold
         self.speed = speed
         self.heading_offset = heading_offset
         self.fixed_heading = fixed_heading
@@ -76,7 +77,7 @@ class UpdatePoseState(smach.State):
     
 
     @staticmethod
-    def pose_reached( current_pose, destination_pose, threshold):
+    def pose_reached( current_pose, destination_pose, threshold, angle_threshold):
         # Check if the current pose is within a certain threshold of the destination pose
         # The function 'compare_poses' should return True if the poses are similar within the threshold
         # print("current_pose",current_pose)
@@ -98,7 +99,7 @@ class UpdatePoseState(smach.State):
         
         yaw_angle_diff = quaternions_angle_difference(current_pose.pose.pose.orientation, destination_pose.orientation)
 
-        return position_diff <= threshold  #and orientation_diff <= threshold
+        return position_diff <= threshold and yaw_angle_diff <= angle_threshold #and orientation_diff <= threshold
 
 
     def call_movement(self, waypoints):
@@ -138,14 +139,15 @@ class UpdatePoseState(smach.State):
     def loop_monitor(self, userdata, waypoints):
             shared_data = userdata.shared_data
             start_time = rospy.Time.now()  # Start time for timeout calculation
-
+            # For the target poses we only change the yaw orientation into the quaternion
+            target_poses = [Pose(point = waypoint.point, orientation = Quaternion(*euler_to_quaternion(0,0,self.heading_offset) )) for waypoint in waypoints]
             while not rospy.is_shutdown() and rospy.Time.now() - start_time < self.timeout_duration:
-                if self.pose_reached(shared_data.submarine_pose, waypoints[0], self.threshold):
+                if self.pose_reached(shared_data.submarine_pose, target_poses[0], self.threshold):
                     rospy.loginfo("Destination reached. Verifying stabilization.")
                     # Ensure stabilization for the configured time
                     stabilization_start = rospy.Time.now()
                     while rospy.Time.now() - stabilization_start < rospy.Duration(0.5):
-                        if not self.pose_reached(shared_data.submarine_pose, waypoints[0], self.threshold):
+                        if not self.pose_reached(shared_data.submarine_pose, target_poses[0], self.threshold):
                             break
                         rospy.sleep(0.1)
                     else:  # If the loop completes without breaking
@@ -214,34 +216,6 @@ class UpdatePoseToObjectState(UpdatePoseState):
         self.call_movement()
         return self.loop_monitor(userdata, self.waypoints)
 
-
-
-class Rotate90DegreesState(UpdatePoseState):
-    def __init__(self, edge_case_callback,next_state_callback ):
-        super(Rotate90DegreesState, self).__init__(outcomes=['success', 'edge_case_detected', 'aborted', "object_not_detected"],
-                                                      input_keys=['shared_data'],
-                                                      output_keys=['edge_case'],
-                                                 edge_case_callback=edge_case_callback,
-                                                   next_state_callback=next_state_callback)
-
-
-    def execute(self, userdata):
-        current_pose = userdata.shared_data.current_pose
-        waypoint = Waypoint()
-        waypoint.header.stamp = rospy.Time.now()
-        waypoint.header.frame_id = "world"
-        waypoint.point.x = current_pose.position.x
-        waypoint.point.y = current_pose.position.y
-        waypoint.point.z = current_pose.position.z
-        quaternion = tf.transformations.quaternion_from_euler(0, 0, math.pi/2)
-        waypoint.orientation.x = quaternion[0]
-        waypoint.orientation.y = quaternion[1] 
-        waypoint.orientation.z = quaternion[2]
-        waypoint.orientation.w = quaternion[3]
-
-        self.waypoints = [waypoint] 
-        self.call_movement(self.waypoints)
-        return self.loop_monitor(userdata)
 
 
 
