@@ -14,6 +14,7 @@
 
     <!-- Common build tool dependency -->
     <buildtool_depend>catkin</buildtool_depend>
+    <build_depend>message_generation</build_depend>
 
     <!-- Dependencies for the Task_Module -->
     <!-- Add dependencies as needed -->
@@ -21,6 +22,7 @@
 
     <!-- Execution-time dependency on the tasks package -->
     <exec_depend>tasks</exec_depend>
+    <exec_depend>message_runtime</exec_depend>
 
 
     <!-- TO ADD LATER -->

@@ -23,6 +23,11 @@ class PIDRegulator:
         msg += '\n\td=%f' % self.d
         msg += '\n\tsat=%f' % self.sat
         return msg
+    
+    def set_parameters(self, p, i, d):
+        self.p = p
+        self.i = i
+        self.d = d
 
     def regulate(self, err, t):
         derr_dt = 0.0
