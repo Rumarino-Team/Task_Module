@@ -179,8 +179,6 @@ class UpdatePoseState(smach.State):
         return self.loop_monitor(userdata, waypoints)
 
 
-
-
          
 class UpdatePoseToObjectState(UpdatePoseState):
     def __init__(self, desired_object_name, edge_case_callback,next_state_callback ):

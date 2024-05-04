@@ -1,0 +1,14 @@
+
+# Position of the truster should be always relative to the center of mass of the robot
+# The orientation should also be relative to the center of mass forward direction.
+thruster_1:
+  position: [0.0, 0.0, 0.0]
+  orientation: [0,0,0]
+
+
+thruster_2:
+  position: [0.0, 0.0, 0.0]
+  orientation: [0,0,0]
+
+  
+        
