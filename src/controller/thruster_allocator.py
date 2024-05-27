@@ -1,23 +1,22 @@
 import os
 from controller import PIDRegulator
-from Task_Module import PIDParams
+from Task_Module import PIDParams, ComputeThrust
 from controller import thruster
 import numpy as np
 import rospy
 from geometry_msgs.msg import Vector3
-from data import initialize_data
+from ..tasks.data import shared_data
 class ThrusterAllocator:
     DEFAULT_AXIS = np.array([1, 0, 0, 0])  # Default thrust direction
 
     def __init__(self, t_1, t_2, positions, orientations, axes=None, pid_params=None):
 
         rospy.init_node('thruster_allocator')
-        initialize_subscriber()
-        shared_data = initialize_data()
-
 
     
         self.s = rospy.Service('set_pid_parameters', PIDParams, self.set_pid_parameters)
+        self.compute_movement = rospy.Service('compute_thrust',ComputeThrust,self.update_target)
+        self.target_pose = None
         self.thrusters_pubishers = []
 
         for i in range(1,9):
@@ -45,7 +44,10 @@ class ThrusterAllocator:
         # going to use this method.
         self.allocation_matrix_collection_1 = np.zeros(t_1, 3)
         self.allocation_matrix_collection_2 = np.zeros(t_2, 1)
-        
+
+    def update_target(self,target_pose):
+        self.target_pose = target_pose
+    def start_publishing(self):
         while not rospy.is_shutdown():
             # Get the desired forces from the controllers
             gen_forces = np.array([self.controller_depth.regulate(), self.controller_surge.regulate(), self.controller_yaw.regulate()])
@@ -54,7 +56,9 @@ class ThrusterAllocator:
             # Publish the thruster forces
             for i in range(8):
                 self.thrusters[i].publish(Vector3(thrust[i], thrust[i], thrust[i]))
-            rate.sleep()
+            rospy.rate.sleep()
+    
+
     def compute_configuration_matrix(self, positions, orientations, axes):
         num_thrusters = len(positions)
         force_dist_matrix = []

@@ -29,7 +29,8 @@ class PIDRegulator:
         self.i = i
         self.d = d
 
-    def regulate(self, err, t):
+    def regulate(self, x1, x2, t):
+        err = x2 - x1
         derr_dt = 0.0
         dt = t - self.prev_t
         if self.prev_t > 0.0 and dt > 0.0:
